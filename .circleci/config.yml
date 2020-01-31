@@ -33,7 +33,11 @@ jobs:
     - run:
         name: Publish Docker Image to Docker Hub
         command: |
+          TAG_NAME="${CIRCLE_BUILD_NUM}_$(docker run --rm orthanc2/awscli aws --version | sed -e 's#^aws-cli/\([^ ]*\).*Python/\([^ ]*\).*$#aws-cli-\1_python-\2#')"
+          docker tag $IMAGE_NAME:latest $IMAGE_NAME:$TAG_NAME
+
           echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          docker push $IMAGE_NAME:$TAG_NAME
           docker push $IMAGE_NAME:latest
 workflows:
   build-master:
