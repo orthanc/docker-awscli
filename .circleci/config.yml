@@ -5,12 +5,6 @@ executors:
       IMAGE_NAME: orthanc2/awscli
     docker:
     - image: circleci/buildpack-deps:stretch
-  dockerhub-description:
-    environment:
-      DOCKERHUB_REPOSITORY: orthanc2/awscli
-      README_FILEPATH: /tmp/workspace/README.md
-    docker:
-    - image: peterevans/dockerhub-description:2.1.0
 jobs:
   build:
     executor: docker-publisher
@@ -63,16 +57,6 @@ jobs:
           docker push $IMAGE_NAME:$MINOR_VERSION_TAG_NAME
           docker push $IMAGE_NAME:$MAJOR_VERSION_TAG_NAME
           docker push $IMAGE_NAME:latest
-  publish-dockerhub-description:
-    executor: dockerhub-description
-    steps:
-    - attach_workspace:
-        at: /tmp/workspace
-    - deploy:
-        name: Publish Dockerhub Description
-        command: |
-          export DOCKERHUB_PASSWORD="${DOCKERHUB_PASS}"
-          /entrypoint.sh
 workflows:
   build-master:
     jobs:
@@ -84,13 +68,6 @@ workflows:
         context: docker-publishing
         requires:
         - build
-        filters:
-          branches:
-            only: master
-    - publish-dockerhub-description:
-        context: docker-publishing
-        requires:
-        - publish-latest
         filters:
           branches:
             only: master
@@ -110,13 +87,6 @@ workflows:
         context: docker-publishing
         requires:
         - build
-        filters:
-          branches:
-            only: master
-    - publish-dockerhub-description:
-        context: docker-publishing
-        requires:
-        - publish-latest
         filters:
           branches:
             only: master
