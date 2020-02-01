@@ -33,7 +33,7 @@ jobs:
     - run:
         name: Calculate Tag Names
         command: |
-          FULL_VERSION="$(docker run --rm orthanc2/awscli aws --version)"
+          FULL_VERSION="$(docker run --rm $IMAGE_NAME aws --version)"
           PYTHON_VERSION="$(echo "${FULL_VERSION}" | sed -e 's#^.*Python/\([^ ]*\).*$#\1#')"
           PYTHON_MINOR_VERSION="${PYTHON_VERSION%.*}"
           PYTHON_MAJOR_VERSION="${PYTHON_MINOR_VERSION%.*}"
