@@ -31,13 +31,30 @@ jobs:
         name: Load archived Docker image
         command: docker load -i /tmp/workspace/image.tar
     - run:
+        name: Calculate Tag Names
+        command: |
+          FULL_VERSION="$(docker run --rm orthanc2/awscli aws --version)"
+          PYTHON_VERSION="$(echo "${FULL_VERSION}" | sed -e 's#^.*Python/\([^ ]*\).*$#\1#')"
+          PYTHON_MINOR_VERSION="${PYTHON_VERSION%.*}"
+          PYTHON_MAJOR_VERSION="${PYTHON_MINOR_VERSION%.*}"
+          CLI_VERSION="$(echo "${FULL_VERSION}" | sed -e 's#^.*aws-cli/\([^ ]*\).*$#\1#')"
+          CLI_MINOR_VERSION="${CLI_VERSION%.*}"
+          CLI_MAJOR_VERSION="${CLI_MINOR_VERSION%.*}"
+
+          echo "export FULL_VERSION_TAG_NAME='${CIRCLE_BUILD_NUM}_aws-cli-${CLI_VERSION}_python-${PYTHON_VERSION}'" >> $BASH_ENV
+          echo "export MINOR_VERSION_TAG_NAME='aws-cli-${CLI_MINOR_VERSION}_python-${PYTHON_MINOR_VERSION}'" >> $BASH_ENV
+          echo "export MAJOR_VERSION_TAG_NAME='aws-cli-${CLI_MAJOR_VERSION}_python-${PYTHON_MAJOR_VERSION}'" >> $BASH_ENV
+    - run:
         name: Publish Docker Image to Docker Hub
         command: |
-          TAG_NAME="${CIRCLE_BUILD_NUM}_$(docker run --rm orthanc2/awscli aws --version | sed -e 's#^aws-cli/\([^ ]*\).*Python/\([^ ]*\).*$#aws-cli-\1_python-\2#')"
-          docker tag $IMAGE_NAME:latest $IMAGE_NAME:$TAG_NAME
+          docker tag $IMAGE_NAME:latest $IMAGE_NAME:$FULL_VERSION_TAG_NAME
+          docker tag $IMAGE_NAME:latest $IMAGE_NAME:$MINOR_VERSION_TAG_NAME
+          docker tag $IMAGE_NAME:latest $IMAGE_NAME:$MAJOR_VERSION_TAG_NAME
 
           echo "$DOCKERHUB_PASS" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
-          docker push $IMAGE_NAME:$TAG_NAME
+          docker push $IMAGE_NAME:$FULL_VERSION_TAG_NAME
+          docker push $IMAGE_NAME:$MINOR_VERSION_TAG_NAME
+          docker push $IMAGE_NAME:$MAJOR_VERSION_TAG_NAME
           docker push $IMAGE_NAME:latest
 workflows:
   build-master:
