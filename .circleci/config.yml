@@ -5,6 +5,12 @@ executors:
       IMAGE_NAME: orthanc2/awscli
     docker:
     - image: circleci/buildpack-deps:stretch
+  dockerhub-description:
+    environment:
+      DOCKERHUB_REPOSITORY: orthanc2/awscli
+      README_FILEPATH: /tmp/workspace/README.md
+    docker:
+    - image: peterevans/dockerhub-description:2.1.0
 jobs:
   build:
     executor: docker-publisher
@@ -21,6 +27,7 @@ jobs:
         root: .
         paths:
         - ./image.tar
+        - ./README.md
   publish-latest:
     executor: docker-publisher
     steps:
@@ -44,7 +51,7 @@ jobs:
           echo "export FULL_VERSION_TAG_NAME='aws-cli-${CLI_VERSION}_python-${PYTHON_VERSION}_build-${CIRCLE_BUILD_NUM}'" >> $BASH_ENV
           echo "export MINOR_VERSION_TAG_NAME='aws-cli-${CLI_MINOR_VERSION}_python-${PYTHON_MINOR_VERSION}'" >> $BASH_ENV
           echo "export MAJOR_VERSION_TAG_NAME='aws-cli-${CLI_MAJOR_VERSION}_python-${PYTHON_MAJOR_VERSION}'" >> $BASH_ENV
-    - run:
+    - deploy:
         name: Publish Docker Image to Docker Hub
         command: |
           docker tag $IMAGE_NAME:latest $IMAGE_NAME:$FULL_VERSION_TAG_NAME
@@ -56,6 +63,16 @@ jobs:
           docker push $IMAGE_NAME:$MINOR_VERSION_TAG_NAME
           docker push $IMAGE_NAME:$MAJOR_VERSION_TAG_NAME
           docker push $IMAGE_NAME:latest
+  publish-dockerhub-description:
+    executor: dockerhub-description
+    steps:
+    - attach_workspace:
+        at: /tmp/workspace
+    - deploy:
+        name: Publish Dockerhub Description
+        command: |
+          export DOCKERHUB_PASSWORD="${DOCKERHUB_PASS}"
+          /entrypoint.sh
 workflows:
   build-master:
     jobs:
@@ -67,6 +84,13 @@ workflows:
         context: docker-publishing
         requires:
         - build
+        filters:
+          branches:
+            only: master
+    - publish-dockerhub-description:
+        context: docker-publishing
+        requires:
+        - publish-latest
         filters:
           branches:
             only: master
@@ -86,6 +110,13 @@ workflows:
         context: docker-publishing
         requires:
         - build
+        filters:
+          branches:
+            only: master
+    - publish-dockerhub-description:
+        context: docker-publishing
+        requires:
+        - publish-latest
         filters:
           branches:
             only: master
